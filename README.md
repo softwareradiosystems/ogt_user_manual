@@ -34,5 +34,5 @@ Building
 --------
 
 Optionally test building all shared content (use -j for parallel building):
-- make        # generate test PDFs
-- make check  # test for asciidoc errors
+- ```make```        # generate test PDFs
+- ```make check```  # test for asciidoc errors
