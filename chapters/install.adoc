@@ -1,0 +1,192 @@
+== Installation
+
+[[install_main_unit]]
+=== Main Unit
+
+The main unit is a general purpose computer that orchestrates the tests. It
+runs the main {app-name} process, connects to _resources_ and orchestrates `slave units'
+as required. The main unit can be anything from a dedicated production rack unit to your laptop at home.
+
+This manual will assume that tests are run  by a user named 'srs' that belongs to group 'osmo-gsm-tester'. 
+Please, note installation steps and dependencies needed will depend on lots of
+factors, like your distribution, your specific setup, which hardware you plan to
+support, etc.
+
+==== Install Osmo-GSM-Tester Dependencies
+
+On a Debian/Ubuntu based system, install the dependencies needed to
+run the osmo-gsm-tester.py code:
+
+----
+apt-get install \
+        dbus \
+        tcpdump \
+        sqlite3 \
+        python3 \
+        python3-setuptools \
+        python3-yaml \
+        python3-mako \
+        python3-gi \
+        python3-numpy \
+        python3-wheel \
+        patchelf \
+        sudo \
+        libcap2-bin \
+        python3-pip \
+        udhcpc \
+        iperf3 \
+        locales \
+        acl
+----
+
+Then install the python dependencies using pip:
+
+----
+pip3 install \
+        "git+https://github.com/podshumok/python-smpplib.git@master#egg=smpplib" \
+        pydbus \
+        pyusb \
+        pysispm
+----
+
+
+==== Install Osmo-GSM-Tester Scripts
+
+To use a fixed installation of the osmo-gsm-tester sources
+for all users, you can install the sources e.g. in '/usr/local/src':
+
+----
+apt-get install git
+mkdir -p /usr/local/src
+cd /usr/local/src
+git clone git://git.osmocom.org/osmo-gsm-tester
+----
+
+To allow all users to run 'osmo-gsm-tester.py', from login as well as non-login
+shells, the easiest solution is to place a symlink in '/usr/local/bin':
+
+----
+ln -s /usr/local/src/osmo-gsm-tester/src/osmo-gsm-tester.py /usr/local/bin/
+----
+
+==== Set Up Paths
+
+On the main unit, create a group for all users that should be allowed to use
+the osmo-gsm-tester, and add users (here 'srs') to this group.
+
+----
+groupadd osmo-gsm-tester
+gpasswd -a srs osmo-gsm-tester
+----
+
+A user added to a group needs to re-login for the group permissions to take
+effect.
+
+
+Assuming that you are using the example config, prepare a system wide _state_
+location in '/var/tmp':
+
+----
+mkdir -p /var/tmp/osmo-gsm-tester/state
+chown -R :osmo-gsm-tester /var/tmp/osmo-gsm-tester
+chmod -R g+rwxs /var/tmp/osmo-gsm-tester
+setfacl -d -m group:osmo-gsm-tester:rwx /var/tmp/osmo-gsm-tester/state
+----
+
+IMPORTANT: the state directory needs to be shared between all users potentially
+running the osmo-gsm-tester to resolve resource allocations. Above 'setfacl'
+command sets the access control to keep all created files group writable.
+
+
+Prepare a system-wide _trials_ location in '/var/tmp':
+
+----
+mkdir -p /var/tmp/osmo-gsm-tester/trials
+chown -R :osmo-gsm-tester /var/tmp/osmo-gsm-tester
+chmod -R g+rwxs /var/tmp/osmo-gsm-tester
+----
+
+
+==== Optional User Settings
+
+===== Allow Core Files
+
+In case a binary run for the test crashes, a core file of the crash should be
+written. This requires a limit rule. Create a file with the required rule:
+
+----
+sudo -s
+echo "@osmo-gsm-tester - core unlimited" > /etc/security/limits.d/osmo-gsm-tester_allow-core.conf
+----
+
+Re-login the user to make these changes take effect.
+
+Set the *kernel.core_pattern* sysctl to *core* (usually the default). For each
+binary run by osmo-gsm-tester, a core file will then appear in the same dir that
+contains stdout and stderr for that process (because this dir is set as CWD).
+
+----
+sysctl -w kernel.core_pattern=core
+----
+
+===== Allow Realtime Priority
+
+Certain binaries should be run with real-time priority.
+Add this permission on the main unit:
+
+----
+sudo -s
+echo "@osmo-gsm-tester - rtprio 99" > /etc/security/limits.d/osmo-gsm-tester_allow-rtprio.conf
+----
+
+Re-login the user to make these changes take effect.
+
+
+===== Allow Capabilities: 'CAP_NET_RAW', 'CAP_NET_ADMIN', 'CAP_SYS_ADMIN'
+
+Certain binaries require 'CAP_NET_RAW' to be set, like 'osmo-bts-octphy' as it
+uses a 'AF_PACKET' socket. Similarly, others (like srsUE) require
+'CAP_NET_ADMIN' to be able to create tun devices, and so on.
+
+To be able to set the following capability without being root, osmo-gsm-tester
+uses sudo to gain permissions to set the capability.
+
+This is the script that osmo-gsm-tester expects on the host running the process:
+
+----
+echo /usr/local/bin/osmo-gsm-tester_setcap_net_raw.sh <<EOF
+#!/bin/bash
+/sbin/setcap cap_net_raw+ep $1
+EOF
+chmod +x /usr/local/bin/osmo-gsm-tester_setcap_net_raw.sh
+----
+
+Now, again on the same host, we need to provide sudo access to this script for
+osmo-gsm-tester:
+
+----
+echo "%osmo-gsm-tester ALL=(root) NOPASSWD: /usr/local/bin/osmo-gsm-tester_setcap_net_raw.sh" > /etc/sudoers.d/osmo-gsm-tester_setcap_net_raw
+chmod 0440 /etc/sudoers.d/osmo-gsm-tester_setcap_net_raw
+----
+
+The script file name 'osmo-gsm-tester_setcap_net_raw.sh' is important, as
+osmo-gsm-tester expects to find a script with this name in '$PATH' at run time.
+
+
+===== Log Rotation
+
+To avoid clogging up /var/log, it makes sense to choose a sane maximum log size:
+
+----
+echo maxsize 10M > /etc/logrotate.d/maxsize
+----
+
+
+=== Slave Unit
+
+Slave units are PCs which are used by Osmo-GSM-Tester to run tests.
+Osmo-GSM-Tester simply requires SSH access to slave units, to move
+binary applications to them, to execute the tests and to retrieve results.
+
+To provide SSH access, use public key authentication. It is recommended to
+use a password-less private key and disable strict host key checking.

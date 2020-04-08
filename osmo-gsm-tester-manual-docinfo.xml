@@ -1,0 +1,77 @@
+<revhistory>
+  <revision>
+    <revnumber>1</revnumber>
+    <date>April 13, 2017</date>
+    <authorinitials>NH</authorinitials>
+    <revremark>
+      Initial version.
+    </revremark>
+  </revision>
+  <revision>
+    <revnumber>2</revnumber>
+    <date>April 8, 2020</date>
+    <authorinitials>PS</authorinitials>
+    <revremark>
+      Restructured and rewritten as a user manual.
+    </revremark>
+  </revision>
+</revhistory>
+
+<authorgroup>
+  <author>
+    <firstname>Neels</firstname>
+    <surname>Hofmeyr</surname>
+    <email>nhofmeyr@sysmocom.de</email>
+    <authorinitials>NH</authorinitials>
+    <affiliation>
+      <shortaffil>sysmocom</shortaffil>
+      <orgname>sysmocom - s.f.m.c. GmbH</orgname>
+      <jobtitle>Senior Developer</jobtitle>
+    </affiliation>
+  </author>
+  <author>
+    <firstname>Pau</firstname>
+    <surname>Espin Pedrol</surname>
+    <email>pespin@sysmocom.de</email>
+    <authorinitials>PE</authorinitials>
+    <affiliation>
+      <shortaffil>sysmocom</shortaffil>
+      <orgname>sysmocom - s.f.m.c. GmbH</orgname>
+      <jobtitle>Software Developer</jobtitle>
+    </affiliation>
+  </author>
+  <author>
+    <firstname>Paul</firstname>
+    <surname>Sutton</surname>
+    <email>paul@softwareradiosystems.com</email>
+    <authorinitials>PS</authorinitials>
+    <affiliation>
+      <shortaffil>srs</shortaffil>
+      <orgname>Software Radio Systems</orgname>
+      <jobtitle>Software Developer</jobtitle>
+    </affiliation>
+  </author>
+</authorgroup>
+
+<copyright>
+  <year>2017-2020</year>
+  <holder>sysmocom - s.f.m.c. GmbH</holder>
+</copyright>
+
+<legalnotice>
+  <para>
+	Permission is granted to copy, distribute and/or modify this
+	document under the terms of the GNU Free Documentation License,
+	Version 1.3 or any later version published by the Free Software
+	Foundation; with the Invariant Sections being just 'Foreword',
+	'Acknowledgements' and 'Preface', with no Front-Cover Texts,
+	and no Back-Cover Texts.  A copy of the license is included in
+	the section entitled "GNU Free Documentation License".
+  </para>
+  <para>
+	The Asciidoc source code of this manual can be found at
+	<ulink url="http://git.osmocom.org/osmo-gsm-manuals/">
+		http://git.osmocom.org/osmo-gsm-manuals/
+	</ulink>
+  </para>
+</legalnotice>

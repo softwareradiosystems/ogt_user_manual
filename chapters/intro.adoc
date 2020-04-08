@@ -1,0 +1,90 @@
+== Introduction
+
+{app-name} is a test automation framework for mobile wireless SDR testbeds.
+The framework provides a flexible solution to instantiate complete networks
+and run a very broad range of tests on testbeds comprising mixtures of
+general-purpose SDR hardware, dedicated mobile wireless infrastructure equipment,
+COTS UE devices and commercial test equipment.
+
+{app-name} runs on a host PC (the `main unit') as a Python 3 process. This
+main unit process may orchestrate remote processes on `slave unit' PCs connected
+to the main unit, usually over SSH. Hardware devices (e.g. SDRs, modems, channel
+emulators, etc) connected to either the main unit or slaves units are controlled
+via IP, raw ethernet, USB or similar means·
+
+In {app-name}, a _resource_ is the name given to a hardware device or combination
+of PC and device. Each _resource_ has a different physical setup, configuration,
+supported features, attributes, etc. _Resources_ are instances of a _resource class_
+such as a `UE' or an `eNodeB'. For example, an {app-name} setup may have 2 `UE'
+instances and 1 `eNodeB' instance. Each of
+these _resources_ are listed and described in configuration files passed to
+{app-name}, which maintains a pool of _resources_ (available, in use, etc.).
+
+Where an SDR application (such as srsUE or srsENB) is being tested, {app-name}
+typically uses a pre-built binary package of the application. To run tests {app-name}
+launches one or more test _suites_, each containing a set of python test scripts.
+Each test uses a specific API provided by {app-name} to configure,
+launch and manage the different applications from the provided binary
+package. Together with a set of hardware _resources_, {app-name} can orchestrate
+a complete network and run tests upon it.
+
+Test _suites_ themselves contain configuration files to list the resources
+required to run its tests. They also provide ways to filter which kind of
+_resources_ will be needed based on their attributes. This permits, for instance,
+asking {app-name} to provide a `UE' supporting 4G, or to provide a specific
+type of `eNodeB' such as srsENB with USRP B210 SDR front-end. Test _suites_ also
+support modifiers or _scenarios_, which overwrite some of the default values that
+{app-name} itself or different _resources_ use.
+
+Moreover, one may want to run the same test suite several times, each with
+different set of _resources_. For instance, one may want to run a test suite with
+an Amarisoft eNodeB and later with an srsENB eNodeB. This is supported by leaving
+the test suite configuration generic enough and then passing one or more _scenarios_
+to it, which allow applying extra filters or modifiers. _Scenarios_ can also be combined to
+filter further or to apply further modifications.
+
+.Sample 4G setup
+[graphviz]
+----
+digraph G {
+	rankdir=LR;
+	jenkins
+	subgraph cluster_lte_hardware {
+		label = "LTE Hardware";
+		style=dotted
+
+		B200 [label="Ettus B200" shape=box]
+		B200_mini [label="Ettus B200_mini" shape=box]
+		rf_distribution [label="RF distribution"]
+
+		{B200 B200_mini}->rf_distribution [dir=both arrowhead="curve" arrowtail="curve"]
+	}
+	subgraph cluster_slave_unit1 {
+	  label = "Slave Unit 1"
+	  srsue [label="srsUE"]
+	}
+	subgraph cluster_slave_unit2 {
+	  label = "Slave Unit 2"
+	  srsenb [label="srsENB"]
+	}
+	subgraph cluster_slave_unit3 {
+	  label = "Slave Unit 3"
+	  srsepc [label="srsEPC"]
+	}
+	subgraph cluster_main_unit {
+	  label = "Main Unit"
+	  osmo_gsm_tester [label="Osmo-GSM-Tester\ntest suites\n& scenarios"]
+	  subgraph {
+		rank=same
+		srsepc [label="srsEPC"]
+	  }
+	}
+
+	jenkins->osmo_gsm_tester [label="trial\n(binaries)"]
+	osmo_gsm_tester->jenkins [label="results"]
+	osmo_gsm_tester->{srsue, srsenb, srsepc} [taillabel="SSH"]
+	srsenb->B200 [label="UHD/USB"]
+	srsue->B200_mini [label="UHD/USB"]
+	srsenb->srsepc [dir=both label="GTP"]
+}
+----

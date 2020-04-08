@@ -1,0 +1,103 @@
+== Running Osmo-GSM-Tester
+
+=== State Directory
+
+Osmo-GSM-Tester uses a single directory to hold global or system-wide state.
+In a typical state directory you can find the following files:
+
+'last_used_*.state'::
+	Contains stateful content spanning across Osmo-GSM-Tester instances and
+	runs. For instance, 'last used msisdn number.state' is automatically
+	(and atomically) increased every time Osmo-GSM-Tester needs to assign a
+	new subscriber in a test, ensuring tests get unique msisdn numbers.
+'reserved_resources.state'::
+	File containing a set of reserved resources by any number of
+	Osmo-GSM-Tester instances (aka pool of allocated resources). Each
+	Osmo-GSM-Tester instance is responsible to clear its resources from the
+	list once it is done using them and are no longer reserved.
+'lock'::
+	Lock file used to implement a mutual exclusion zone around any state
+	files in the 'state_dir', to prevent race conditions between different
+	Osmo-GSM-Tester instances running in parallel.
+
+This way, several concurrent users of Osmo-GSM-Tester (ie. several
+Osmo-GSM-Tester processes running in parallel) can run without interfering with
+each other (e.g. using same ARFCN, same IP or same physical resources).
+
+If you would like to set up several separate configurations (not typical), note
+that the 'state_dir' is used to reserve resources, which only works when all
+configurations that share resources also use the same 'state_dir'. It's also
+important to note that since resources are stored in YAML dictionary form, if
+the same physical device is described differently in several
+<<resource_conf,resources.conf>> files (used by different Osmo-GSM-Tester instances),
+resource allocation may not work as expected.
+
+=== Config Paths
+
+Osmo-GSM-Tester looks for configuration files in various standard
+directories in this order:
+
+- '$HOME/.config/osmo-gsm-tester/'
+- '/usr/local/etc/osmo-gsm-tester/'
+- '/etc/osmo-gsm-tester/'
+
+The config location can also be set by an environment variable
+'$OSMO_GSM_TESTER_CONF', which then overrides the above locations.
+
+Osmo-GSM-Tester expects to find the following configuration files in a
+configuration directory:
+
+- <<paths_conf,paths.conf>>
+- <<resource_conf,resources.conf>>
+- <<default_suites_conf,default-suites.conf>> (optional)
+- <<defaults_conf,defaults.conf>> (optional)
+
+[[paths_conf]]
+==== 'paths.conf'
+
+The 'paths.conf' file specifies the locations of test suites, scenario definitions
+and the state directory, used to store the global state.
+
+
+.Sample paths.conf file:
+----
+state_dir: '/var/tmp/osmo-gsm-tester/state'
+suites_dir: './suites'
+scenarios_dir: './scenarios'
+----
+
+Any relative paths found in a 'paths.conf' file are interpreted as relative to
+the directory of that 'paths.conf' file.
+
+
+=== Execution
+
+Each invocation of Osmo-GSM-Tester runs a _suite_ of tests using
+precompiled binary applications from a _trial_ with specified _resources_
+which are selected and configured using _scenarios_.
+
+Examples for launching tests:
+
+- Run the default suites (see <<default_suites_conf,default_suites.conf>>) on a
+  given set of binaries:
+
+----
+osmo-gsm-tester.py path/to/my-trial
+----
+
+- Run an explicit choice of 'suite:scenario':
+
+----
+osmo-gsm-tester.py path/to/my-trial -s 4g:srsenb@UHD,6
+----
+
+- Run one 'suite:scenario1+scenario2' combination, setting log level to 'debug'
+  and enabling logging of full python tracebacks, and also only run just the
+  'ping.py' test from the suite:
+
+----
+osmo-gsm-tester.py path/to/my-trial -s 4g:srsenb@UHD,6+srsue@UHD -l dbg -T -t ping
+----
+
+A test script may also be run step-by-step in a python debugger, see
+<<debugging>>.

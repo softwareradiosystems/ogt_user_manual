@@ -1,0 +1,329 @@
+== Configuration
+
+To execute tests, Osmo-GSM-Tester requires the following:
+
+- A _resources_ configuration
+- A test _suite_
+- An optional _scenario_ configuration
+- A set of application binaries (_trial_)
+
+[[resource_conf]]
+=== Resources Configuration
+
+Resources which are available to run tests is specified in a _resources_
+configuration file (_resources.conf_). This is a YAML file which is
+structured as a list of items for each resource type, where each
+item has one or more attributes.
+
+Sample _resources.conf_ file:
+----
+# all hardware and interfaces available to this osmo-gsm-tester
+
+ip_address:
+- addr: 172.18.50.2
+- addr: 172.18.50.3
+- addr: 172.18.50.4
+- addr: 172.18.50.5
+
+run_node:
+- run_type: ssh
+  run_addr: 172.18.50.100
+  ssh_user: jenkins
+  ssh_addr: 172.18.50.100
+
+enb:
+- label: srsENB-zmq
+  type: srsenb
+  rf_dev_type: zmq
+  remote_user: jenkins
+  addr: 172.18.50.101
+
+modem:
+- label: srsUE-zmq
+  type: srsue
+  rf_dev_type: zmq
+  remote_user: jenkins
+  addr: 172.18.50.100
+  imsi: '001010123456789'
+  ki: '00112233445566778899aabbccddeeff'
+  auth_algo: 'xor'
+  features: ['4g']
+----
+
+The sample resources configuration file above has 4 items. The first provides
+a list of local IP addresses which are available on the main unit. The second
+item is a _run_node_, a general-purpose slave unit which can be accessed via SSH.
+The third item is an SDR LTE eNodeB and the fourth is an SDR LTE UE.
+
+The format of _resources.conf_ is specified in a schema. At parse time, the
+provided configuration is validated against this schema.
+
+[[suite_conf]]
+=== Test Suites
+
+Test suites contain a set of tests which are designed to be run together to test a
+set of features given a specific set of resources. As a result, resources are
+allocated per suite and not per test.
+
+A test suite consists of a directory containing one or more tests ('.py' python
+scripts) and a suite configuration file (_suite.conf_).
+
+.Sample 'suites_dir' directory tree:
+----
+suites_dir/
+|-- suiteA
+|   |-- suite.conf
+|   '-- testA_1.py
+|-- suiteB
+|   |-- suite.conf
+|   |-- testB_1.py
+|   |-- testB_2.py
+----
+
+==== Suite Configuration File
+
+The suite configuration file _suite.conf_ provides Osmo-GSM-Tester
+with the base restrictions to apply when allocating resources. These base
+suite restrictions will be further filtered by _scenarios_.
+
+Suite configuration files are parsed using the <<schema_want,Want>> schema.
+
+It can also override attributes for the allocated resources through the
+<<schema_want,modifiers>> section (to be further modified by
+<<scenario_conf,scenario>> files later on). Similary it can do the same for
+general configuration options (no per-resource) through the
+<<schema_want,config>> section.
+
+.Sample 'suite.conf' file:
+----
+resources:
+  ip_address:
+  - times: 9 # msc, bsc, hlr, stp, mgw*2, sgsn, ggsn, iperf3srv
+  bts:
+  - times: 1
+  modem:
+  - times: 2
+    features:
+    - gprs
+    - voice
+  - times: 2
+    features:
+    - gprs
+
+config:
+  bsc:
+    net:
+      codec_list:
+      - fr1
+
+defaults:
+  timeout: 50s
+----
+
+==== Test scripts
+
+Test scripts are written in python and use the Osmo-GSM-Tester APIs to control
+the lifecycle of resource elements for a given test.
+
+.Sample test script for 4G:
+----
+#!/usr/bin/env python3
+from osmo_gsm_tester.testenv import *
+
+epc = suite.epc()
+enb = suite.enb()
+ue = suite.modem()
+
+epc.subscriber_add(ue)
+epc.start()
+enb.ue_add(ue)
+enb.start(epc)
+
+print('waiting for ENB to connect to EPC...')
+wait(epc.enb_is_connected, enb)
+print('ENB is connected to EPC')
+
+ue.connect(enb)
+print('waiting for UE to attach...')
+wait(ue.is_connected, None)
+print('UE is attached')
+
+proc = ue.run_netns_wait('ping', ('ping', '-c', '10', epc.tun_addr()))
+output = proc.get_stdout()
+print(output)
+test.set_report_stdout(output)
+----
+
+The sample test above creates a 4G network using EPC, eNodeB and UE resource elements.
+It then configures the EPC and eNodeB with the UE element and starts both. Once the 
+eNodeB connects to the EPC and the network is running, the UE is instructed to connect.
+When the UE has attached to the network, the ping application runs IP traffic over
+the top of the end-to-end network.
+
+
+==== Test Suite Libraries
+
+Tests in the same testsuite willing to use some shared code can do so by putting
+it eg. in '$suites_dir/$suitename/lib/testlib.py':
+----
+#!/usr/bin/env python3
+from osmo_gsm_tester.testenv import *
+
+def my_shared_code(foo):
+    return foo.bar()
+----
+
+and then in the test itself use it this way:
+----
+#!/usr/bin/env python3
+from osmo_gsm_tester.testenv import *
+
+import testlib
+suite.test_import_modules_register_for_cleanup(testlib)
+from testlib import my_shared_code
+
+bar = my_shared_code(foo)
+----
+
+[[scenario_conf]]
+=== Scenario Configurations
+
+Scenarios define further constraints to serve the resource requests of a
+<<suite_conf,suite.conf>>, ie. to select specific resources from the general
+resource pool specified in <<resource_conf,resources.conf>>. In this way, _scenarios_
+act as filters to select specific resources and modifiers to configure parameters on resources.
+
+When running Osmo-GSM-Tester with a test suite, multiple scenario configurations
+can be combined in the form:
+
+----
+<suite_name>:<scenario>[+<scenario>[+...]]
+----
+
+e.g.
+
+----
+my_suite:sysmo+tch_f+amr
+----
+
+
+*_Parametrized scenario conf files_*:
+
+Scenario '.conf' files can be parametrized. The concept is similar to that
+of systemd's Template Unit Files. That is, an scenario file can be written so
+that some values inside it can be passed at the time of referencing the
+scenario name. The idea behind its existence is to re-use the same
+scenario file for a set of attributes which are changed and that can have a lot
+of different values. For instance, if a scenario is aimed at setting or
+filtering some specific attribute holding an integer value, without parametrized
+scenarios then a separate file would be needed for each value the user wanted to use.
+
+A parametrized scenario file, similar to systemd Template Unit Files,
+contain the character '@' in their file name, ie follow the syntax below:
+----
+scenario-name@param1,param2,param3,[...],paramN.conf
+----
+
+.Sample parameterized scenario for 4G eNodeB (_srsenb.conf_):
+----
+resources:
+  enb:
+  - type: srsenb
+    rf_dev_type: ${param1}
+modifiers:
+  enb:
+    - num_prb: ${param2}
+----
+
+The sample scenario file above specifies that an eNodeB of type srsenb must be
+used with an RF device type which is passed using a scenario parameter.
+It further allows a configuration parameter of the eNodeB (number of PRBs)
+to be specified using a second scenario parameter.
+
+This scenario file can be used with the `4g' test suite as follows:
+----
+- 4g:srsenb_scenario@UHD,6
+----
+
+In this case, an eNodeB resource of type srsenb is required with a UHD RF device. The 
+eNodeB resource is further configured to use 6 PRBs.
+
+
+If only one resource is specified in the scenario, then the resource allocator
+assumes the restriction is to be applied to the first resource and that remaining
+resources have no restrictions to be taken into consideration.
+
+To apply restrictions only on the second resource, the first element can be left
+emtpy, like:
+
+----
+resources:
+  bts:
+  - {}
+  - type: osmo-bts-sysmo
+----
+
+[[trial_conf]]
+=== Trial (Application Binaries)
+
+A trial is a set of pre-built sysroot archives to be tested. A trial comes
+in the form of a directory containing a number of '<inst-name>.*tgz' tar
+archives (containing different applications) as well as a 'checksums.md5' file to
+verify the tar archives' integrity.
+
+.Example of a "trial" containing sysroot archives
+[graphviz]
+----
+digraph G {
+	subgraph cluster_trial {
+		label = "Trial (binaries)"
+		srslte [label="srslte.build-2020-04-07_20_22_19.tgz\n(srsepc + srsenb + srsue\n+ deps compiled for main unit)"]
+		checksums [label="checksums.md5"]
+
+		checksums -> {srslte}
+	}
+}
+----
+
+When the Osmo-GSM-Tester is invoked to run on such a trial directory, it will
+create a sub directory named 'inst' and unpack the tar archives into it.
+
+For each test run on this trial, a new subdirectory in the trial dir is
+created, named in the form of 'run.<timestamp>'. A symbolic link 'last-run'
+will point at the most recently created run dir. This run dir will accumulate:
+
+* the rendered configuration files used to run the binaries
+* stdout and stderr outputs of the binaries
+* pcap files for processes doing relevant network communication
+* a test log
+* jenkins parsable XML (Junit) reports
+
+The script in 'contrib/jenkins-run.sh' takes care of related tasks such as
+
+* creating the dir structure,
+* generating md5 sums for the various tar.gz containing software builds to be tested,
+* cleaning up after the build,
+* saving extra logs such as journalctl output from ofonod,
+* generating a final .tar.gz file with all the logs and reports to store as jenkins archives.
+
+Osmo-GSM-Tester tests create objects to manage the allocated resources during test
+lifetime. These objects, in turn, usually run and manage processes started from
+the trial's sysroot binaries. Osmo-GSM-Tester provides APIs for those object classes
+to discover, unpack and run those binaries. An object class simply needs to
+request the name of the binary it wants to use (for instance 'srslte'), and
+Osmo-GSM-Tester will take care of preparing everything and providing the sysroot path
+to it. It's a duty of the resource class to copy over the sysroot to the
+destination if the intention is to run the binary remotely on another host.
+
+When seeking a sysroot of a given name '<inst-name>' in the 'inst/' directory,
+Osmo-GSM-Tester will look for 'tgz' files starting with the pattern '<inst-name>.'
+(up to the first dot). That means, suffixes are available for Osmo-GSM-Tester user to
+identify the content, for instance having an incrementing version counter or a
+commit hash. Hence, these example files are considered valid and will be
+selected by Osmo-GSM-Tester for 'srslte': 'srslte.tgz', 'srslte.build-23.tgz',
+'srslte.5f3e0dd2.tgz', 'srslte.armv7.build-2.tgz'. If either none or more
+than one valid file is found matching the pattern, an exception will be thrown.
+
+
+
+

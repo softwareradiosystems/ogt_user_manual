@@ -1,0 +1,28 @@
+:app-name: Osmo-GSM-Tester
+
+Osmo-GSM-Tester User Manual
+===========================
+Neels Hofmeyr <nhofmeyr@sysmocom.de>, Pau Espin Pedrol <pespin@sysmocom.de>, Paul Sutton <paul@softwareradiosystems.com>
+
+include::{srcdir}/chapters/intro.adoc[]
+
+<<<
+
+include::{srcdir}/chapters/install.adoc[]
+
+<<<
+
+include::{srcdir}/chapters/config.adoc[]
+
+<<<
+
+include::{srcdir}/chapters/run.adoc[]
+
+<<<
+
+include::{srcdir}/chapters/debugging.adoc[]
+
+<<<
+
+include::{srcdir}/chapters/troubleshooting.adoc[]
+
