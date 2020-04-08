@@ -1,0 +1,10 @@
+# manuals
+*.html
+*.svg
+*.pdf
+*__*.png
+*.check
+generated/
+osmo-gsm-tester-manual.xml
+common
+build
