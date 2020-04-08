@@ -49,7 +49,6 @@ filter further or to apply further modifications.
 ----
 digraph G {
 	rankdir=LR;
-	jenkins
 	subgraph cluster_sdr_hardware {
 		label = "SDR Hardware";
 		style=dotted
@@ -71,15 +70,13 @@ digraph G {
 	}
 	subgraph cluster_main_unit {
 	  label = "Main Unit"
-	  osmo_gsm_tester [label="Osmo-GSM-Tester\ntest suites\n& scenarios"]
+	  osmo_gsm_tester [label="Osmo-GSM-Tester\ntest suites, scenarios \n& trial binaries"]
 	  subgraph {
 		rank=same
 		srsepc [label="srsEPC"]
 	  }
 	}
 
-	jenkins->osmo_gsm_tester [label="trial\n(binaries)"]
-	osmo_gsm_tester->jenkins [label="results"]
 	osmo_gsm_tester->{srsue, srsenb, srsepc} [taillabel="SSH"]
 	srsenb->B200 [label="UHD/USB"]
 	srsue->B200_mini [label="UHD/USB"]
