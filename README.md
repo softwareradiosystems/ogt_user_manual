@@ -11,7 +11,8 @@ git clone https://github.com/osmocom/osmo-gsm-manuals.git
 
 To build the manual, the following are needed, by example of a debian system:
 
-apt-get install \
+```
+sudo apt-get install \
   make \
   asciidoc \
   asciidoc-dblatex \
@@ -21,14 +22,17 @@ apt-get install \
   mscgen \
   graphviz \
   python3-nwdiag
+```
 
 Dependencies for "make check":
 
-apt-get install libxml2-utils
+```
+sudo apt-get install libxml2-utils
+```
 
 Building
 --------
 
 Optionally test building all shared content (use -j for parallel building):
-  make        # generate test PDFs
-  make check  # test for asciidoc errors
+- make        # generate test PDFs
+- make check  # test for asciidoc errors
