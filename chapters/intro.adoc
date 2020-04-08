@@ -10,7 +10,7 @@ COTS UE devices and commercial test equipment.
 main unit process may orchestrate remote processes on `slave unit' PCs connected
 to the main unit, usually over SSH. Hardware devices (e.g. SDRs, modems, channel
 emulators, etc) connected to either the main unit or slaves units are controlled
-via IP, raw ethernet, USB or similar means·
+via IP, raw ethernet, USB or similar means.
 
 In {app-name}, a _resource_ is the name given to a hardware device or combination
 of PC and device. Each _resource_ has a different physical setup, configuration,
@@ -39,7 +39,7 @@ or of {app-name} itself.
 
 In many cases, one may want to run the same test suite several times, each with
 different set of _resources_. For instance, one may want to run a test suite with
-an Amarisoft eNodeB and later with an srsENB eNodeB. This is supported by leaving
+an Amarisoft eNodeB and later with an SRS eNodeB. This is supported by leaving
 the test suite configuration generic enough and then passing one or more _scenarios_
 to it, which allow applying extra filters or modifiers. Multiple _scenarios_ can also be combined to
 filter further or to apply further modifications.
