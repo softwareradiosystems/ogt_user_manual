@@ -52,6 +52,12 @@ pip3 install \
 
 ==== Install Osmo-GSM-Tester Scripts
 
+To install Osmo-GSM-Tester, simply clone the repository:
+
+----
+git clone git://git.osmocom.org/osmo-gsm-tester
+----
+
 To use a fixed installation of the osmo-gsm-tester sources
 for all users, you can install the sources e.g. in '/usr/local/src':
 

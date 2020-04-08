@@ -47,28 +47,41 @@ The config location can also be set by an environment variable
 Osmo-GSM-Tester expects to find the following configuration files in a
 configuration directory:
 
-- <<paths_conf,paths.conf>>
-- <<resource_conf,resources.conf>>
-- <<default_suites_conf,default-suites.conf>> (optional)
-- <<defaults_conf,defaults.conf>> (optional)
+- paths.conf
+- resources.conf
+- default-suites.conf (optional)
+- defaults.conf (optional)
 
-[[paths_conf]]
-==== 'paths.conf'
 
 The 'paths.conf' file specifies the locations of test suites, scenario definitions
-and the state directory, used to store the global state.
-
-
-.Sample paths.conf file:
+and the state directory, used to store the global state:
 ----
 state_dir: '/var/tmp/osmo-gsm-tester/state'
 suites_dir: './suites'
 scenarios_dir: './scenarios'
 ----
-
 Any relative paths found in a 'paths.conf' file are interpreted as relative to
 the directory of that 'paths.conf' file.
 
+
+The 'resources.conf' file lists available resources as described in the previous section.
+
+The optional 'default-suites.conf' file contains a YAML list of 'suite:scenario' combinations.
+If Osmo-GSM-Tester is invoked without suite definitions, this default list is used. Each
+'suite:scenario' combination is run in sequence. A suite name must match the name of a directory in the
+suites_dir as defined by paths.conf. A scenario name must match the name of a configuration file in the
+scnearios_dir as defined by paths.conf (optionally without the '.conf' suffix).
+
+The optional 'defaults.conf' file contains a set of
+default attributes and values (in YAML format) that object classes can use by default
+if these are not specified in the 'resources.conf' file. These can easily be changed or
+overwritten by suite.conf or scenario.conf files through modifiers.
+
+Each binary run by osmo-gsm-tester, e.g. 'srsue' or 'srsenb',
+typically has a configuration file template that is populated with values for a
+trial run. Hence, a suite.conf, scenario.conf
+or a resources.conf providing a similar setting always has
+precedence over the values given in a 'defaults.conf'
 
 === Execution
 

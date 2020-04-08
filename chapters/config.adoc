@@ -10,7 +10,7 @@ To execute tests, Osmo-GSM-Tester requires the following:
 [[resource_conf]]
 === Resources Configuration
 
-Resources which are available to run tests is specified in a _resources_
+Resources which are available to run tests are specified in a _resources_
 configuration file (_resources.conf_). This is a YAML file which is
 structured as a list of items for each resource type, where each
 item has one or more attributes.
@@ -86,39 +86,32 @@ The suite configuration file _suite.conf_ provides Osmo-GSM-Tester
 with the base restrictions to apply when allocating resources. These base
 suite restrictions will be further filtered by _scenarios_.
 
-Suite configuration files are parsed using the <<schema_want,Want>> schema.
-
 It can also override attributes for the allocated resources through the
 <<schema_want,modifiers>> section (to be further modified by
 <<scenario_conf,scenario>> files later on). Similary it can do the same for
-general configuration options (no per-resource) through the
+general configuration options (not per-resource) through the
 <<schema_want,config>> section.
 
-.Sample 'suite.conf' file:
+.Sample 'suite.conf' file for 4G:
 ----
 resources:
-  ip_address:
-  - times: 9 # msc, bsc, hlr, stp, mgw*2, sgsn, ggsn, iperf3srv
-  bts:
+  run_node: # for EPC
+  - times: 1
+  enb:
   - times: 1
   modem:
-  - times: 2
+  - times: 1
     features:
-    - gprs
-    - voice
-  - times: 2
-    features:
-    - gprs
-
-config:
-  bsc:
-    net:
-      codec_list:
-      - fr1
+    - 4g
 
 defaults:
-  timeout: 50s
+  timeout: 180s
 ----
+
+The sample 4G suite.conf above specifies three resources - a
+_run_node_ (used for the EPC), an _enb_ (eNodeB) and a single
+_modem_ (UE).
+
 
 ==== Test scripts
 
@@ -203,7 +196,7 @@ can be combined in the form:
 e.g.
 
 ----
-my_suite:sysmo+tch_f+amr
+4g:srsenb+srsue
 ----
 
 
@@ -242,7 +235,7 @@ to be specified using a second scenario parameter.
 
 This scenario file can be used with the `4g' test suite as follows:
 ----
-- 4g:srsenb_scenario@UHD,6
+- 4g:srsenb@UHD,6
 ----
 
 In this case, an eNodeB resource of type srsenb is required with a UHD RF device. The 
@@ -258,9 +251,9 @@ emtpy, like:
 
 ----
 resources:
-  bts:
+  enb:
   - {}
-  - type: osmo-bts-sysmo
+  - type: srsenb
 ----
 
 [[trial_conf]]
@@ -275,6 +268,7 @@ verify the tar archives' integrity.
 [graphviz]
 ----
 digraph G {
+	size="4,4"
 	subgraph cluster_trial {
 		label = "Trial (binaries)"
 		srslte [label="srslte.build-2020-04-07_20_22_19.tgz\n(srsepc + srsenb + srsue\n+ deps compiled for main unit)"]
